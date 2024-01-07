@@ -1,0 +1,37 @@
+###############################################################################
+# Set default behavior to automatically normalize line endings.
+###############################################################################
+* text=auto
+
+
+###############################################################################
+# Linux-based files
+###############################################################################
+.sh             text eol=lf
+.bashrc         text eol=lf
+.bash_profile   text eol=lf
+.bash_logout    text eol=lf
+.bash_aliases   text eol=lf
+.babelrc        text eol=lf
+.gitconfig      text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.gitkeep        text eol=lf
+.gitmodules     text eol=lf
+
+.nvmrc          text eol=lf
+.npmrc          text eol=lf
+.eslintrc       text eol=lf
+.eslintignore   text eol=lf
+.jshintrc       text eol=lf
+.jshintignore   text eol=lf
+
+.dockerignore   tetx eol=lf
+
+
+###############################################################################
+# Windows-based files
+###############################################################################
+.bat            text eol=crlf
+.cmd            text eol=crlf
+.ps1            text eol=crlf
