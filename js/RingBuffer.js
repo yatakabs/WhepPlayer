@@ -1,5 +1,5 @@
 
-import { InvalidOperationError } from "./errors.js";
+import { InvalidOperationError } from "./Errors.js";
 
 /**
  * Represents a ring buffer data structure.
@@ -39,7 +39,7 @@ class RingBuffer {
     /**
      * Get the items in the RingBuffer, as a copy of items (snapshot).
      * Items are ordered from first to last.
-     * 
+     *
      * @returns {Array} The items in the RingBuffer.
      */
     get items() {

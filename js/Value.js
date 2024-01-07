@@ -2,7 +2,7 @@
 /**
  * Checks if the given value is null.
  * This method never throw an error.
- * 
+ *
  * @param {any} value - The value to check.
  * @returns {boolean} - True if the value is null, false otherwise.
  */
@@ -13,7 +13,7 @@ const isNull = (value) => {
 /**
  * Checks if a value is undefined.
  * This method never throw an error.
- * 
+ *
  * @param {*} value - The value to check.
  * @returns {boolean} - Returns true if the value is undefined, otherwise returns false.
  */
@@ -29,7 +29,7 @@ const isNullOrUndefined = (value) => {
 /**
  * Checks if a given text is empty.
  * This method never throw an error.
- * 
+ *
  * @param {string} text - The text to check.
  * @returns {boolean} - True if the text is empty, false otherwise.
  */
@@ -67,7 +67,7 @@ const isOnlyWhiteSpaces = (text) => {
  * Checks if a string is null, undefined, empty, or contains only whitespace.
  * This method never throw an error.
  * @param {string} text - The string to check.
- * 
+ *
  * @returns {boolean} - True if the string is null, undefined, empty, or contains only whitespace; otherwise, false.
 
  */
