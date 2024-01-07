@@ -1,0 +1,32 @@
+{
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "test",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "label": "npm: test",
+      "detail": "jest"
+    },
+    {
+      "type": "npm",
+      "script": "install",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: install",
+      "detail": "install dependencies from package",
+      "hide": true
+    },
+    {
+      "type": "npm",
+      "script": "lint",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: lint",
+      "detail": "eslint"
+    }
+  ]
+}

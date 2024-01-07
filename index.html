@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>WHEP Player</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div id="container" class="container">
+        <video id="player"></video>
+
+        <div id="debug-container">
+            <div id="debug-controls">
+                <button id="play_button" onclick="startPlayback()">Play</button>
+            </div>
+
+            <div id="debug-monitor">
+                <section id="debug-monitor-options-section" class="debug-monitor-section">
+                    <h3>Options</h3>
+                    <ul id="debug-monitor-options">
+                        </ol>
+                </section>
+
+                <section id="debug-monitor-events-section" class="debug-monitor-section">
+                    <h3>Events</h3>
+                    <ul id="debug-monitor-events">
+                        </ol>
+                </section>
+
+                <section id="debug-monitor-logs-section" class="debug-monitor-section">
+                    <h3>Logs</h3>
+                    <div id="debug-monitor-log-items-container">
+                        <ul id="debug-monitor-logs">
+                        </ul>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/index.js"></script>
+    <script type="module">
+        import {
+            startPlayback
+        } from './js/index.js';
+
+        window.startPlayback = async () => {
+            await startPlayback();
+        }
+    </script>
+</body>
+
+</html>
