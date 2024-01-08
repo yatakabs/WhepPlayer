@@ -543,7 +543,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Info,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -557,7 +557,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Debug,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -571,7 +571,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Info,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -585,7 +585,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Warning,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -599,7 +599,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Error,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -613,7 +613,7 @@ const setupDebugLog = (debugLogListElement) => {
             new Date(),
             DebugLogLevel.Trace,
             message,
-            crypto.randomUUID()
+            generateUuid()
         );
 
         debugLogPrinter.appendLog(debuglogItem);
@@ -713,3 +713,33 @@ export async function startPlaybackAsync(
 }
 
 
+/**
+ * Generates a UUID (Universally Unique Identifier).
+ * It generates a random UUID using the crypto.randomUUID() function, if available.
+ * Otherwise, it falls back to generating a random UUID using Math.random().
+ *
+ * HTTPS is required to use crypto.randomUUID().
+ * It is available in almost all the modern Web browsers, but only when using HTTPS.
+ * Thus, when using HTTP, it will fall back to using Math.random().
+ *
+ * @param {boolean} [forceJsRandom=false] - Whether to force the use of Math.random() for generating the UUID.
+ * @returns {string} The generated UUID.
+ *
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID
+ */
+export const generateUuid = (forceJsRandom = false) => {
+    // Use generateUuid() when available, if not, fallback to Math.random().
+    if (!forceJsRandom && typeof crypto !== "undefined" && typeof randomUUID === "function") {
+        return crypto.randomUUID();
+    }
+
+    // https://stackoverflow.com/a/2117523/1233379
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === "x"
+            ? r
+            : (r & 0x3 | 0x8);
+
+        return v.toString(16);
+    });
+};
