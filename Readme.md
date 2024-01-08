@@ -1,3 +1,5 @@
+[![Deploy static content to Pages](https://github.com/yatakabs/WhepPlayer/actions/workflows/static.yml/badge.svg?branch=master)](https://github.com/yatakabs/WhepPlayer/actions/workflows/static.yml)
+
 # ObsWhepPlayer
 A WHEP player web page for OBS Studio's browser source.
 It automatically starts playback of a WEHP stream (sent out from another instance of OBS Studio) with no mute.
