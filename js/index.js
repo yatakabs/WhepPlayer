@@ -512,7 +512,6 @@ if (typeof window !== "undefined" && window.document) {
             }
         }
         else {
-            options.debug = true;
             console.debug("OBS Studio not detected");
 
             if (options.autoplay) {
