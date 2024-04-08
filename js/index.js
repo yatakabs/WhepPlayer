@@ -243,6 +243,69 @@ const getOptions = (defaultOptions) => {
 };
 
 /**
+ * Updates the SDP to force stereo audio for Opus codec as a workaround for the stereo audio downmixing issue
+ * in Chromium-based web browsers (i.e., Google Chrome, Microsoft Edge, OBS Studio Browser Source, etc.).
+ * @param {string} sdp - The answer SDP to update.
+ * @returns {string} The updated answer SDP.
+ * @throws {Error} If there is an error updating the answer SDP.
+ * /
+const updateAnswerSdpToFixStereoAudioIssue = (sdp) => {
+    const sdpLines = sdp
+        .split("\n")
+        .map((line) => line.trim());
+
+    // Find the Opus codec line in the SDP to get the RTP map number
+    // e.g., for "a=rtpmap:111 opus/48000/2", the RTP map number is 111
+    const opusPayloadType = sdpLines
+        .filter((line) => line.includes("opus/48000/2"))
+        .map((line) => {
+            return line.split(" ")[0].split(":")[1];
+        })[0];
+
+    console.debug("opusPayloadType", opusPayloadType);
+
+    if (!opusPayloadType) {
+        console.warn("Opus codec not found in the answer SDP. Skipping stereo audio fix.");
+        return sdp;
+    }
+
+    // Modify the answer SDP to force stereo audio for the Opus codec
+    // by appending stereo=1 or replacing stereo=0 with stereo=1 to the fmtp line.
+    // e.g., change "a=fmtp:111 useinbandfec=1" to "a=fmtp:111 useinbandfec=1;stereo=1"
+    // e.g., change "a=fmtp:111 useinbandfec=1;stereo=0" to "a=fmtp:111 useinbandfec=1;stereo=1"
+    const modifiedSdpLines = sdpLines
+        .map((line) => line.trim())
+        .map((line) => {
+            if (line.startsWith(`a=fmtp:${opusPayloadType}`)) {
+                console.debug("Found Opus codec line in the answer SDP", line);
+
+                // If the line already contains stereo=1, return the line as is
+                if (line.includes("stereo=1")) {
+                    console.debug("Stereo audio already enabled for Opus codec. Skipping stereo audio fix.");
+                    return line;
+                }
+
+                // If the line contains stereo=0, replace stereo=0 with stereo=1
+                if (line.includes("stereo=0")) {
+                    const stereoEnabledLine = line.replace("stereo=0", "stereo=1");
+                    console.debug("Enabling stereo audio for Opus codec.", stereoEnabledLine);
+                    return stereoEnabledLine;
+                }
+
+                // If the line contains no other parameters, append stereo=1")
+                const stereoEnabledLine = `${line};stereo=1`;
+                console.debug("Enabling stereo audio for Opus codec.", stereoEnabledLine);
+                return stereoEnabledLine;
+            }
+
+            return line;
+        });
+
+    // Replace the original SDP with the modified SDP
+    return modifiedSdpLines.join("\n");
+};
+
+/**
  * Starts the WEHP stream.
  *
  * @param {MediaStream} stream - The stream to play the WEHP stream in.
@@ -261,77 +324,87 @@ export const startWhepStream = async (stream, options) => {
     Guard.Argument.isNotNullOrUndefined("options", options, "Options must be provided");
 
     const streamUrl = options.streamUrl;
-
-    // Plays WEHP stream in video element using MediaSource API with RTCPeerConnection
     const peerConnection = new RTCPeerConnection(null);
-    peerConnection.addTransceiver("video", { direction: "recvonly" });
-    peerConnection.addTransceiver("audio", { direction: "recvonly" });
 
-    peerConnection.ontrack = (event) => {
-        console.debug("ontrack", event);
-        stream.addTrack(event.track);
-    };
+    // Set up the peer connection
+    try {
+        // Add transceivers for audio and video
+        peerConnection.addTransceiver("video", { direction: "recvonly" });
+        peerConnection.addTransceiver("audio", { direction: "recvonly", channels: 2 });
 
-    const offer = await peerConnection.createOffer();
-    peerConnection.setLocalDescription(offer);
-
-    console.debug("offer", offer);
-    const answer = await fetch(streamUrl, {
-        method: "POST",
-        body: offer.sdp,
-        headers: {
-            "Content-Type": "application/sdp"
-        },
-        cache: "no-cache",
-        mode: "cors",
-    });
-
-    console.debug("Successfully fetched answer");
-    const answerSdp = await answer.text();
-    console.debug("answerSdp", answerSdp);
-
-    const remoteSessionDescriptor = new RTCSessionDescription({
-        type: "answer",
-        sdp: answerSdp
-    });
-
-    await peerConnection.setRemoteDescription(remoteSessionDescriptor);
-
-
-    peerConnection.oniceconnectionstatechange = (event) => {
-        if (peerConnection.iceConnectionState === "disconnected") {
-            console.warn("RTC connection disconnected");
-
-            // Automatically reconnect when disconnected, if option is set
-            // Auto-reconnect interval can be set with reconnect-interval option
-            const reconnect = options["auto-reconnect"] || true;
-            const reconnectInterval = options["reconnect-interval"] || 1000;
-            if (reconnect) {
-                setTimeout(() => {
-                    startWhepStream(options);
-                }, reconnectInterval);
+        // Set up the peer connection
+        peerConnection.ontrack = async (event) => {
+            if (event.track) {
+                console.debug("Adding track to stream", event.track);
+                stream.addTrack(event.track);
             }
+        };
+
+        // Create an offer to send to the server
+        const offer = await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: true,
+        });
+
+        // Update the offer SDP to fix the stereo audio issue
+        try {
+            console.debug("Updating offer SDP to fix stereo audio issue", offer);
+            offer.sdp = updateAnswerSdpToFixStereoAudioIssue(offer.sdp);
         }
-        else {
-            console.debug("RTC connection state change", event, peerConnection.iceConnectionState);
+        catch (error) {
+            console.error("Failed to update answer SDP to fix stereo audio issue.", error);
         }
-    };
 
-    peerConnection.onicecandidate = (event) => {
-        console.debug("onicecandidate", event);
-    };
+        // Set the local description with the updated offer SDP
+        console.debug("Setting local description", offer);
+        await peerConnection.setLocalDescription(offer);
+        console.debug("Successfully set local description");
 
-    peerConnection.onicegatheringstatechange = (event) => {
-        console.debug("onicegatheringstatechange", event);
-    };
 
-    peerConnection.onnegotiationneeded = (event) => {
-        console.debug("onnegotiationneeded", event);
-    };
+        // Send the offer to the server to get the offer from the server
+        console.debug("Sending offer to the server", offer);
+        const answerResponse = await fetch(streamUrl, {
+            method: "POST",
+            body: offer.sdp,
+            headers: {
+                "Content-Type": "application/sdp"
+            },
+            cache: "no-cache",
+            mode: "cors",
+        });
 
-    peerConnection.onsignalingstatechange = (event) => {
-        console.debug("onsignalingstatechange", event);
-    };
+        // Get the offer from the server
+        const answerSdp = await answerResponse.text();
+        console.debug("Received answer from the server", answerSdp);
+
+        // Create an answer with the answer SDP
+        const answer = new RTCSessionDescription({
+            type: "answer",
+            sdp: answerSdp,
+        });
+
+        // Update the answer SDP to fix the stereo audio issue
+        try {
+            console.debug("Updating answer SDP to fix stereo audio issue", answer);
+            answer.sdp = updateAnswerSdpToFixStereoAudioIssue(answer.sdp);
+            console.info("Successfully updated answer SDP to fix stereo audio issue.", answer);
+        }
+        catch (error) {
+            console.error("Failed to update answer SDP to fix stereo audio issue.", error);
+        }
+
+
+        // Set the remote description with the updated answer SDP
+        console.debug("Setting remote description", answer);
+        await peerConnection.setRemoteDescription(answer);
+        console.info("Successfully set remote description");
+
+    }
+    catch (error) {
+        console.error("Failed to send offer to the server", error);
+        peerConnection.close();
+        throw error;
+    }
 
     return peerConnection;
 };
@@ -339,12 +412,12 @@ export const startWhepStream = async (stream, options) => {
 
 
 /**
- * Applies the specified options to the player.
- * @param {Object} player - The player object, of HTMLVideoElement, to apply options to.
- * @param {Object} options - The options to apply.
- *
- * @throws {ArgumentNullError} If the player or options are null or undefined.
- */
+     * Applies the specified options to the player.
+     * @param {Object} player - The player object, of HTMLVideoElement, to apply options to.
+     * @param {Object} options - The options to apply.
+     *
+     * @throws {ArgumentNullError} If the player or options are null or undefined.
+     */
 export const applyPlayerOptions = (player, options) => {
     Guard.Argument.isNotNullOrUndefined("player", player, "Player must be provided");
     Guard.Argument.isNotNullOrUndefined("options", options, "Options must be provided");
@@ -689,9 +762,12 @@ export async function startPlaybackAsync(
         const session = await initializeRtcSession(videoElement, options);
         window.session = session;
 
-        console.debug("Player initialized.");
-        console.debug("Stream", session.stream);
-        console.debug("Peer connection", session.peerConnection);
+        console.debug(
+            "Player initialized.",
+            {
+                stream: session.stream,
+                peerConnection: session.peerConnection,
+            });
     }
     catch (error) {
         console.error("Failed to initialize player.", error);
@@ -713,19 +789,19 @@ export async function startPlaybackAsync(
 
 
 /**
- * Generates a UUID (Universally Unique Identifier).
- * It generates a random UUID using the crypto.randomUUID() function, if available.
- * Otherwise, it falls back to generating a random UUID using Math.random().
- *
- * HTTPS is required to use crypto.randomUUID().
- * It is available in almost all the modern Web browsers, but only when using HTTPS.
- * Thus, when using HTTP, it will fall back to using Math.random().
- *
- * @param {boolean} [forceJsRandom=false] - Whether to force the use of Math.random() for generating the UUID.
- * @returns {string} The generated UUID.
- *
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID
- */
+         * Generates a UUID (Universally Unique Identifier).
+         * It generates a random UUID using the crypto.randomUUID() function, if available.
+         * Otherwise, it falls back to generating a random UUID using Math.random().
+         *
+         * HTTPS is required to use crypto.randomUUID().
+         * It is available in almost all the modern Web browsers, but only when using HTTPS.
+         * Thus, when using HTTP, it will fall back to using Math.random().
+         *
+         * @param {boolean} [forceJsRandom=false] - Whether to force the use of Math.random() for generating the UUID.
+         * @returns {string} The generated UUID.
+         *
+         * @see https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID
+         */
 export const generateUuid = (forceJsRandom = false) => {
     // Use generateUuid() when available, if not, fallback to Math.random().
     if (!forceJsRandom && typeof crypto !== "undefined" && typeof randomUUID === "function") {
