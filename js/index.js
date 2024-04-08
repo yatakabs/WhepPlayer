@@ -248,7 +248,7 @@ const getOptions = (defaultOptions) => {
  * @param {string} sdp - The answer SDP to update.
  * @returns {string} The updated answer SDP.
  * @throws {Error} If there is an error updating the answer SDP.
- * /
+ */
 const updateAnswerSdpToFixStereoAudioIssue = (sdp) => {
     const sdpLines = sdp
         .split("\n")
